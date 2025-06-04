@@ -6,6 +6,7 @@
 
 #include "registro.h"
 #include "merge_runs.h"
+#include "quicksort.h"
 
 /*
  * ────────────────────────────────────────────────────────────────────────────
@@ -78,7 +79,8 @@ int main(int argc, char *argv[]) {
         if (lidos == 0) break;  // fim de arquivo
 
         // Ordena em memória pelo campo “chave”
-        qsort(buffer, lidos, sizeof(RegistroDisco), comparar_registros);
+        //qsort(buffer, lidos, sizeof(RegistroDisco), comparar_registros);
+        quicksort_registros(buffer, 0, (lidos > 0 ? lidos - 1 : 0));
 
         // Grava run temporária no disco: run_00000.bin, run_00001.bin, etc.
         char nome_run[64];

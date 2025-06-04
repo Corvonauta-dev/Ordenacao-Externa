@@ -4,7 +4,7 @@ SRCDIR   := src
 OBJDIR   := obj
 BINDIR   := bin
 
-# Lista todos os .c dentro de src/
+# Todos os módulos .c, incluindo quicksort.c
 SOURCES := $(wildcard $(SRCDIR)/*.c)
 # Converte src/arquivo.c → obj/arquivo.o
 OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SOURCES))
@@ -16,7 +16,7 @@ all: $(TARGET)
 $(TARGET): $(OBJECTS) | $(BINDIR)
 	$(CC) $(CFLAGS) -o $@ $^
 
-# Compila cada .c para .o
+# Compila cada .c em .o
 $(OBJDIR)/%.o: $(SRCDIR)/%.c | $(OBJDIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
@@ -27,7 +27,7 @@ $(OBJDIR):
 $(BINDIR):
 	mkdir -p $(BINDIR)
 
-# Limpeza de objetos e executável
+# Limpeza (remove objetos e executável)
 clean:
 	rm -rf $(OBJDIR)/*.o $(TARGET)
 
