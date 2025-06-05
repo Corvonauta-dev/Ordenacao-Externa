@@ -7,6 +7,7 @@
 #include "registro.h"
 #include "merge_runs.h"
 #include "quicksort.h"
+#include "monitor.h"
 
 /*
  * ────────────────────────────────────────────────────────────────────────────
@@ -35,15 +36,16 @@
  *   Após isso, exibe mensagem de sucesso e finaliza.
  * ────────────────────────────────────────────────────────────────────────────
  */
+
 int main(int argc, char *argv[]) {
     // Checa parâmetros de linha de comando
     if (argc < 3) {
         fprintf(stderr,
-            "Uso: %s <arquivo_entrada> <max_blocos_em_memoria>\n"
-            "  <arquivo_entrada>       : ex.: misturado-grande.vet\n"
-            "  <max_blocos_em_memoria> : quantos registros (264 bytes cada)\n"
-            "                            cabem em RAM simultaneamente.\n",
-            argv[0]
+                "Uso: %s <arquivo_entrada> <max_blocos_em_memoria>\n"
+                "  <arquivo_entrada>       : ex.: misturado-grande.vet\n"
+                "  <max_blocos_em_memoria> : quantos registros (264 bytes cada)\n"
+                "                            cabem em RAM simultaneamente.\n",
+                argv[0]
         );
         return EXIT_FAILURE;
     }
@@ -57,8 +59,10 @@ int main(int argc, char *argv[]) {
     }
     size_t max_blocos = (size_t) tmp;
 
+    mon_timer_start();
+
     // ──────────── FASE 1: Criação de runs simples ────────────
-    FILE *arquivo_entrada = fopen(nome_entrada, "rb");
+    FILE *arquivo_entrada = mon_fopen(nome_entrada, "rb");
     if (!arquivo_entrada) {
         perror("❌ Erro ao abrir arquivo de entrada");
         return EXIT_FAILURE;
@@ -68,7 +72,7 @@ int main(int argc, char *argv[]) {
     RegistroDisco *buffer = malloc(max_blocos * sizeof(RegistroDisco));
     if (!buffer) {
         perror("❌ Falha no malloc do buffer");
-        fclose(arquivo_entrada);
+        mon_fclose(arquivo_entrada);
         return EXIT_FAILURE;
     }
 
@@ -85,32 +89,36 @@ int main(int argc, char *argv[]) {
         // Grava run temporária no disco: run_00000.bin, run_00001.bin, etc.
         char nome_run[64];
         snprintf(nome_run, sizeof(nome_run), "run_%05zu.bin", contagem_runs);
-        FILE *saida_run = fopen(nome_run, "wb");
+        FILE *saida_run = mon_fopen(nome_run, "wb");
         if (!saida_run) {
             perror("❌ Erro ao criar run temporário");
             free(buffer);
-            fclose(arquivo_entrada);
+            mon_fclose(arquivo_entrada);
             return EXIT_FAILURE;
         }
         if (fwrite(buffer, sizeof(RegistroDisco), lidos, saida_run) != lidos) {
             perror("❌ Erro ao escrever run temporário");
             free(buffer);
-            fclose(arquivo_entrada);
-            fclose(saida_run);
+            mon_fclose(arquivo_entrada);
+            mon_fclose(saida_run);
             return EXIT_FAILURE;
         }
-        fclose(saida_run);
+        mon_fclose(saida_run);
         contagem_runs++;
     }
 
-    fclose(arquivo_entrada);
+    mon_fclose(arquivo_entrada);
     free(buffer);
+
+    mon_timer_stop_and_log(1);
 
     if (contagem_runs == 0) {
         fprintf(stderr, "❌ Nenhum registro encontrado em '%s'.\n", nome_entrada);
         return EXIT_FAILURE;
     }
     printf("✔ Fase 1 concluída: %zu runs simples geradas.\n", contagem_runs);
+
+    mon_timer_start();
 
     // ──────────── FASE 2: Mesclagem multi-pass ────────────
     // Prepara vetor com nomes de runs atuais (“run_00000.bin”, …)
@@ -181,19 +189,23 @@ int main(int argc, char *argv[]) {
     }
     free(runs_atuais);
 
+    mon_timer_stop_and_log(2);
+
     printf("✔ Fase 2 concluída: arquivo “%s” gerado.\n", nome_ordenado);
 
+    mon_timer_start();
+
     // ──────────── FASE 3: Reconstrução em “reconstruido.tar” ────────────
-    FILE *arquivo_ordenado = fopen(nome_ordenado, "rb");
+    FILE *arquivo_ordenado = mon_fopen(nome_ordenado, "rb");
     if (!arquivo_ordenado) {
         perror("❌ Erro ao abrir “grande_sorted.bin” para reconstrução");
         return EXIT_FAILURE;
     }
     const char *nome_recon = "reconstruido.tar";
-    FILE *saida_recon = fopen(nome_recon, "wb");
+    FILE *saida_recon = mon_fopen(nome_recon, "wb");
     if (!saida_recon) {
         perror("❌ Erro ao criar “reconstruido.tar”");
-        fclose(arquivo_ordenado);
+        mon_fclose(arquivo_ordenado);
         return EXIT_FAILURE;
     }
 
@@ -207,8 +219,8 @@ int main(int argc, char *argv[]) {
         // Grava apenas pacote[0..tamanho-1] no .tar reconstruído
         if (fwrite(reg_temp.pacote, 1, reg_temp.tamanho, saida_recon) != reg_temp.tamanho) {
             perror("❌ Erro ao escrever em “reconstruido.tar”");
-            fclose(arquivo_ordenado);
-            fclose(saida_recon);
+            mon_fclose(arquivo_ordenado);
+            mon_fclose(saida_recon);
             return EXIT_FAILURE;
         }
         total_bytes += reg_temp.tamanho;
@@ -221,8 +233,8 @@ int main(int argc, char *argv[]) {
         unsigned char *zeros = calloc(pad, 1);
         if (!zeros) {
             perror("❌ Falha no calloc do padding");
-            fclose(arquivo_ordenado);
-            fclose(saida_recon);
+            mon_fclose(arquivo_ordenado);
+            mon_fclose(saida_recon);
             return EXIT_FAILURE;
         }
         fwrite(zeros, 1, pad, saida_recon);
@@ -234,8 +246,10 @@ int main(int argc, char *argv[]) {
     fwrite(bloco_zero, 1, 512, saida_recon);
     fwrite(bloco_zero, 1, 512, saida_recon);
 
-    fclose(arquivo_ordenado);
-    fclose(saida_recon);
+    mon_fclose(arquivo_ordenado);
+    mon_fclose(saida_recon);
+
+    mon_timer_stop_and_log(3);
 
     printf("✔ Fase 3 concluída: “%s” gerado (conteúdo = %zu bytes + padding = %zu bytes).\n",
            nome_recon, total_bytes, pad + 1024);
@@ -258,6 +272,8 @@ int main(int argc, char *argv[]) {
         }
         closedir(dir);
     }
+
+    mon_log_max_fd();
 
     return EXIT_SUCCESS;
 }

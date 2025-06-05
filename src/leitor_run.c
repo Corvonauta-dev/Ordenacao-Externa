@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "leitor_run.h"
+#include "monitor.h"
 
 /*
  * ➔ inicializa_leitor:
@@ -12,7 +13,7 @@
  * param nome_run  Nome do arquivo de run (ex.: “run_00005.bin”)
  */
 void inicializa_leitor(LeitorRun *lr, const char *nome_run) {
-    lr->arquivo = fopen(nome_run, "rb");
+    lr->arquivo = mon_fopen(nome_run, "rb");
     if (!lr->arquivo) {
         lr->tem_reg = false;  // ❌ não abriu
         return;
@@ -22,7 +23,7 @@ void inicializa_leitor(LeitorRun *lr, const char *nome_run) {
         lr->tem_reg = true;   // ✔ primeiro registro lido com sucesso
     } else {
         lr->tem_reg = false;  // ❌ sem registros
-        fclose(lr->arquivo);
+        mon_fclose(lr->arquivo);
         lr->arquivo = NULL;
     }
 }
@@ -41,7 +42,7 @@ void avancar_leitor(LeitorRun *lr) {
         lr->tem_reg = true;   // ✔ registro válido disponível
     } else {
         lr->tem_reg = false;  // ❌ fim do arquivo
-        fclose(lr->arquivo);
+        mon_fclose(lr->arquivo);
         lr->arquivo = NULL;
     }
 }

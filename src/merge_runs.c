@@ -4,6 +4,7 @@
 #include "merge_runs.h"
 #include "leitor_run.h"
 #include "heap_minimo.h"
+#include "monitor.h"
 
 /*
  * ➔ comparar_registros:
@@ -80,7 +81,7 @@ int mesclar_runs_bloco(char **runs_entrada, size_t n_runs, const char *nome_said
     }
 
     // 4) Abre arquivo de saída para gravação binária
-    FILE *saida = fopen(nome_saida, "wb");
+    FILE *saida = mon_fopen(nome_saida, "wb");
     if (!saida) {
         free(heap);
         free(leitores);
@@ -94,7 +95,7 @@ int mesclar_runs_bloco(char **runs_entrada, size_t n_runs, const char *nome_said
 
         // Grava registro no arquivo de saída
         if (fwrite(&menor.registro, sizeof(RegistroDisco), 1, saida) != 1) {
-            fclose(saida);
+            mon_fclose(saida);
             free(heap);
             free(leitores);
             return -1;
@@ -112,7 +113,7 @@ int mesclar_runs_bloco(char **runs_entrada, size_t n_runs, const char *nome_said
     }
 
     // 6) Libera recursos
-    fclose(saida);
+    mon_fclose(saida);
     free(heap);
     free(leitores);
     return 0;
