@@ -42,4 +42,9 @@ void mon_timer_start(void);
  */
 void mon_timer_stop_and_log(int phase_num);
 
+
+size_t mon_fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t mon_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+void mon_log_io_stats(void);
+
 #endif // MONITOR_H

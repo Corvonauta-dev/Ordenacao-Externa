@@ -94,7 +94,7 @@ int mesclar_runs_bloco(char **runs_entrada, size_t n_runs, const char *nome_said
         NoHeap menor = remover_raiz_heap(heap, &tamanho_heap);
 
         // Grava registro no arquivo de saída
-        if (fwrite(&menor.registro, sizeof(RegistroDisco), 1, saida) != 1) {
+        if (mon_fwrite(&menor.registro, sizeof(RegistroDisco), 1, saida) != 1) {
             mon_fclose(saida);
             free(heap);
             free(leitores);

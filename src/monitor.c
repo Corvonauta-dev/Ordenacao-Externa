@@ -59,3 +59,31 @@ void mon_timer_stop_and_log(int phase_num) {
 
     fprintf(stderr, "METRICA_TEMPO_FASE%d: %.4f\n", phase_num, time_taken);
 }
+
+
+// Em monitor.c, no topo com as outras variáveis estáticas:
+static size_t g_bytes_lidos = 0;
+static size_t g_bytes_escritos = 0;
+
+// Implementação das novas funções:
+size_t mon_fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t lidos = fread(ptr, size, nmemb, stream);
+    if (lidos > 0) {
+        g_bytes_lidos += lidos * size;
+    }
+    return lidos;
+}
+
+size_t mon_fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream) {
+    size_t escritos = fwrite(ptr, size, nmemb, stream);
+    if (escritos > 0) {
+        g_bytes_escritos += escritos * size;
+    }
+    return escritos;
+}
+
+void mon_log_io_stats(void) {
+    // Imprime em MB para facilitar a leitura
+    fprintf(stderr, "METRICA_IO_LIDO_MB: %.2f\n", (double)g_bytes_lidos / 1024 / 1024);
+    fprintf(stderr, "METRICA_IO_ESCRITO_MB: %.2f\n", (double)g_bytes_escritos / 1024 / 1024);
+}

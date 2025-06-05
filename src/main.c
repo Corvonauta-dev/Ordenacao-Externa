@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     size_t contagem_runs = 0;
     while (1) {
         // Lê no máximo max_blocos registros de uma vez
-        size_t lidos = fread(buffer, sizeof(RegistroDisco), max_blocos, arquivo_entrada);
+        size_t lidos = mon_fread(buffer, sizeof(RegistroDisco), max_blocos, arquivo_entrada);
         if (lidos == 0) break;  // fim de arquivo
 
         // Ordena em memória pelo campo “chave”
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
             mon_fclose(arquivo_entrada);
             return EXIT_FAILURE;
         }
-        if (fwrite(buffer, sizeof(RegistroDisco), lidos, saida_run) != lidos) {
+        if (mon_fwrite(buffer, sizeof(RegistroDisco), lidos, saida_run) != lidos) {
             perror("❌ Erro ao escrever run temporário");
             free(buffer);
             mon_fclose(arquivo_entrada);
@@ -212,12 +212,12 @@ int main(int argc, char *argv[]) {
     // Lê registro a registro de “grande_sorted.bin”
     RegistroDisco reg_temp;
     size_t total_bytes = 0;
-    while (fread(&reg_temp, sizeof(RegistroDisco), 1, arquivo_ordenado) == 1) {
+    while (mon_fread(&reg_temp, sizeof(RegistroDisco), 1, arquivo_ordenado) == 1) {
         if (reg_temp.tamanho > 250) {
             reg_temp.tamanho = 250;  // segurança extra
         }
         // Grava apenas pacote[0..tamanho-1] no .tar reconstruído
-        if (fwrite(reg_temp.pacote, 1, reg_temp.tamanho, saida_recon) != reg_temp.tamanho) {
+        if (mon_fwrite(reg_temp.pacote, 1, reg_temp.tamanho, saida_recon) != reg_temp.tamanho) {
             perror("❌ Erro ao escrever em “reconstruido.tar”");
             mon_fclose(arquivo_ordenado);
             mon_fclose(saida_recon);
@@ -237,14 +237,14 @@ int main(int argc, char *argv[]) {
             mon_fclose(saida_recon);
             return EXIT_FAILURE;
         }
-        fwrite(zeros, 1, pad, saida_recon);
+        mon_fwrite(zeros, 1, pad, saida_recon);
         free(zeros);
     }
 
     // 2) Dois blocos de 512 bytes de zeros (fim-de-tar)
     unsigned char bloco_zero[512] = { 0 };
-    fwrite(bloco_zero, 1, 512, saida_recon);
-    fwrite(bloco_zero, 1, 512, saida_recon);
+    mon_fwrite(bloco_zero, 1, 512, saida_recon);
+    mon_fwrite(bloco_zero, 1, 512, saida_recon);
 
     mon_fclose(arquivo_ordenado);
     mon_fclose(saida_recon);
@@ -274,6 +274,7 @@ int main(int argc, char *argv[]) {
     }
 
     mon_log_max_fd();
+    mon_log_io_stats();
 
     return EXIT_SUCCESS;
 }

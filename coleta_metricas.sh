@@ -16,11 +16,8 @@ echo "Executando: $BIN $ARQ $MAXB"
 echo "----------------------------------------------------------------------"
 # A saída do 'time' (que vai para stderr) e a saída do programa (stdout e stderr)
 # são todas enviadas para o 'tee', que as mostra no terminal e grava no ficheiro LOG.
-# É importante que as métricas (METRICA_...) impressas em stderr pelo programa C
-# também sejam capturadas.
 { LC_ALL=C /usr/bin/time --verbose "$BIN" "$ARQ" "$MAXB"; } 2>&1 | tee "$LOG"
 
-# O script espera aqui porque a linha acima é síncrona (não tem '&' no final)
 #-------------------------- Fim da execução ----------------------------#
 echo "----------------------------------------------------------------------"
 echo
@@ -34,10 +31,10 @@ RUNS=$(
   grep "Fase 1 concluída:" "$LOG" \
     | head -n1 \
     | sed -E 's/.*: *([0-9]+) .*/\1/' \
-    || echo "0" # Valor de fallback se o grep falhar
+    || echo "0"
 )
 
-# 3.2. Tempo de cada fase (agora vindo diretamente do programa C)
+# 3.2. Tempo de cada fase
 if grep -q "METRICA_TEMPO_FASE1" "$LOG"; then
   TEMPO1=$(grep "METRICA_TEMPO_FASE1" "$LOG" | cut -d':' -f2 | tr -d ' ')
 else
@@ -56,15 +53,28 @@ else
   TEMPO3="N/A"
 fi
 
-# 3.3. I/O: “File system inputs” e “File system outputs” vindos do time --verbose
-FS_IN=$(grep -i "File system inputs" "$LOG" | awk '{print $4}' || echo "0")
-FS_OUT=$(grep -i "File system outputs" "$LOG" | awk '{print $4}' || echo "0")
+# 3.3. I/O do 'time --verbose'
+FS_IN_TIME=$(grep -i "File system inputs" "$LOG" | awk '{print $4}' || echo "0")
+FS_OUT_TIME=$(grep -i "File system outputs" "$LOG" | awk '{print $4}' || echo "0")
 
-# 3.4. Pico de descritores abertos (agora vindo diretamente do programa C)
+# 3.4. Pico de descritores abertos (do programa C)
 if grep -q "METRICA_MAX_FD" "$LOG"; then
   MAX_OPEN=$(grep "METRICA_MAX_FD" "$LOG" | cut -d':' -f2 | tr -d ' ')
 else
   MAX_OPEN="N/A"
+fi
+
+# 3.5. I/O personalizado (do programa C, em MB)
+if grep -q "METRICA_IO_LIDO_MB" "$LOG"; then
+  IO_LIDO_MB=$(grep "METRICA_IO_LIDO_MB" "$LOG" | cut -d':' -f2 | tr -d ' ')
+else
+  IO_LIDO_MB="N/A"
+fi
+
+if grep -q "METRICA_IO_ESCRITO_MB" "$LOG"; then
+  IO_ESCRITO_MB=$(grep "METRICA_IO_ESCRITO_MB" "$LOG" | cut -d':' -f2 | tr -d ' ')
+else
+  IO_ESCRITO_MB="N/A"
 fi
 
 ### 4) Contar arquivos temporários que restaram no fim
@@ -76,8 +86,10 @@ echo "Número de runs (Fase 1)         : $RUNS"
 echo "Tempo Fase 1 (s)                : $TEMPO1"
 echo "Tempo Fase 2 (s)                : $TEMPO2"
 echo "Tempo Fase 3 (s)                : $TEMPO3"
-echo "I/O Leitura (bytes do 'time')   : $FS_IN"
-echo "I/O Gravação (bytes do 'time')  : $FS_OUT"
+echo "I/O Leitura (time, bytes)       : $FS_IN_TIME"
+echo "I/O Gravação (time, bytes)      : $FS_OUT_TIME"
+echo "I/O LIDO LÓGICO (programa, MB)  : $IO_LIDO_MB"    # NOVA MÉTRICA
+echo "I/O ESCRITO LÓGICO (programa, MB): $IO_ESCRITO_MB" # NOVA MÉTRICA
 echo "Máx. descritores abertos (fd)   : $MAX_OPEN"
 echo "Arquivos temporários restantes  : $TMP_COUNT"
 echo "Log completo salvo em           : $LOG"

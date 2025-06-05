@@ -18,7 +18,7 @@ void inicializa_leitor(LeitorRun *lr, const char *nome_run) {
         lr->tem_reg = false;  // ❌ não abriu
         return;
     }
-    size_t lidos = fread(&lr->registro, sizeof(RegistroDisco), 1, lr->arquivo);
+    size_t lidos = mon_fread(&lr->registro, sizeof(RegistroDisco), 1, lr->arquivo);
     if (lidos == 1) {
         lr->tem_reg = true;   // ✔ primeiro registro lido com sucesso
     } else {
@@ -37,7 +37,7 @@ void inicializa_leitor(LeitorRun *lr, const char *nome_run) {
  */
 void avancar_leitor(LeitorRun *lr) {
     if (!lr->arquivo) return;  // já estava fechado
-    size_t lidos = fread(&lr->registro, sizeof(RegistroDisco), 1, lr->arquivo);
+    size_t lidos = mon_fread(&lr->registro, sizeof(RegistroDisco), 1, lr->arquivo);
     if (lidos == 1) {
         lr->tem_reg = true;   // ✔ registro válido disponível
     } else {
